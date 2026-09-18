@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dental Case Sharing Platform</title>
   <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&family=Great+Vibes&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+
+  <!-- DataLists للاقتراحات التلقائية -->
+  <datalist id="locationsDatalist"></datalist>
+  <datalist id="treatmentsDatalist"></datalist>
 
   <!-- Header -->
   <header class="main-header">
@@ -17,6 +21,7 @@
         <div>
           <h1>Dental Case Sharing Platform</h1>
           <p>منصة مشاركة وحجز الحالات الطبية لحظياً</p>
+          <div id="currentDateDisplay" style="font-size: 12px; color: var(--accent-blue); font-weight: bold; margin-top: 4px;"></div>
         </div>
       </div>
 
@@ -29,49 +34,35 @@
 
   <!-- Main Container -->
   <main class="app-container">
-    
-    <!-- Realtime Stats Bar -->
-    <section class="stats-grid">
-      <div class="stat-card">
-        <span class="stat-label">🟢 الحالات المتاحة</span>
-        <span class="stat-value" id="statAvailableCases">0</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">📌 حالاتي المحجوزة</span>
-        <span class="stat-value" id="statMyBookedCases">0</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">📍 المدن المسجلة</span>
-        <span class="stat-value" id="statCities">0</span>
-      </div>
-    </section>
 
     <!-- Navigation Tabs -->
     <div class="tabs-bar">
-      <button id="tabAvailable" class="tab-btn active" onclick="switchTab('available')">الحالات المتاحة</button>
+      <button id="tabAvailable" class="tab-btn active" onclick="switchTab('available')">
+        الحالات المتاحة (<span id="availableBadge">0</span>)
+      </button>
       <button id="tabMyBooked" class="tab-btn" onclick="switchTab('my_booked')">
         حالاتي المحجوزة (<span id="myBookedBadge">0</span>)
       </button>
     </div>
 
-    <!-- Filters & Search Section -->
+    <!-- Filter Section -->
     <section class="filter-section">
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="ابحث باسم المريض، رقم الهاتف، أو التخصص..." oninput="applyFilters()">
+        <input type="text" id="searchInput" placeholder="ابحث باسم المريض، رقم الهاتف، أو التخصص..." oninput="onFilterChange()">
       </div>
 
       <div class="filters-row">
-        <select id="filterGender" onchange="applyFilters()">
-          <option value="">جميع الأجناس</option>
+        <select id="filterGender" onchange="onFilterChange()">
+          <option value="">النوع</option>
           <option value="Male">ذكر</option>
           <option value="Female">أنثى</option>
         </select>
 
-        <select id="filterLocation" onchange="applyFilters()">
+        <select id="filterLocation" onchange="onFilterChange()">
           <option value="">كل الأماكن</option>
         </select>
 
-        <select id="filterTreatment" onchange="applyFilters()">
+        <select id="filterTreatment" onchange="onFilterChange()">
           <option value="">كل العلاجات</option>
         </select>
 
@@ -81,8 +72,15 @@
 
     <!-- Cases List Container -->
     <section id="casesContainer" class="cases-grid">
-      <!-- Cases load here dynamically from Firebase -->
+      <!-- Cases load dynamically -->
     </section>
+
+    <!-- Load More Button -->
+    <div style="text-align: center; margin-top: 25px;">
+      <button id="loadMoreBtn" class="btn-secondary" style="display: none; margin: 0 auto; padding: 10px 25px; cursor: pointer;" onclick="loadMoreCases()">
+        ⬇️ عرض المزيد من الحالات
+      </button>
+    </div>
 
   </main>
 
@@ -132,7 +130,7 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label>الجنس *</label>
+          <label>النوع*</label>
           <select id="caseGender">
             <option value="Male">ذكر</option>
             <option value="Female">أنثى</option>
@@ -140,13 +138,19 @@
         </div>
         <div class="form-group">
           <label>المدينة / المنطقة *</label>
-          <input type="text" id="caseLocationInput" placeholder="القاهرة - Nasr City">
+          <input type="text" id="caseLocationInput" list="locationsDatalist" placeholder="اختر أو اكتب المدينة...">
         </div>
       </div>
 
+      <!-- Multiple Treatments Input Section with Datalist -->
       <div class="form-group">
-        <label>نوع العلاج / التخصص *</label>
-        <input type="text" id="caseTreatmentInput" placeholder="Orthodontics, Endodontics...">
+        <label>العلاجات / التخصصات المطلوبة *</label>
+        <div id="treatmentsContainer">
+          <div class="treatment-input-row">
+            <input type="text" class="case-treatment-field" list="treatmentsDatalist" placeholder="اختر أو اكتب العلاج الأول *">
+          </div>
+        </div>
+        <button type="button" class="btn-add-treatment" onclick="addTreatmentField()">➕ إضافة علاج آخر للمريض</button>
       </div>
 
       <div class="form-group">
@@ -160,6 +164,14 @@
       </div>
     </div>
   </div>
+
+  <!-- Footer Signature -->
+  <footer style="padding: 30px 0; border-top: 1px solid var(--border-color); margin-top: 40px;">
+    <div class="signature">
+      <span class="signature-text">DEVELOPED BY</span>
+      <span class="signature-name">Quantum Smile</span>
+    </div>
+  </footer>
 
   <!-- Firebase CDN Integration -->
   <script type="module">
