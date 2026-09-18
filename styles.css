@@ -117,37 +117,6 @@ body {
   padding: 0 15px;
 }
 
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 15px;
-  margin-bottom: 25px;
-}
-
-.stat-card {
-  background: var(--card-bg);
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-}
-
-.stat-label {
-  display: block;
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--accent-blue);
-}
-
 /* Tabs Navigation */
 .tabs-bar {
   display: flex;
@@ -248,15 +217,23 @@ body {
 .case-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.treatment-badges-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .treatment-badge {
-  background: #f1f5f9;
-  color: #334155;
-  padding: 4px 10px;
+  background: #eff6ff;
+  color: var(--accent-blue);
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -265,6 +242,7 @@ body {
   padding: 3px 10px;
   border-radius: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-available {
@@ -350,6 +328,42 @@ body {
   flex: 1;
 }
 
+/* Dynamic Treatments Input Styling */
+.treatment-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.btn-remove-treatment {
+  background: #fee2e2;
+  color: var(--danger);
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-add-treatment {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px dashed #cbd5e1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  width: 100%;
+  margin-top: 4px;
+  transition: 0.2s;
+}
+
+.btn-add-treatment:hover {
+  background: #e2e8f0;
+}
+
 /* Modals */
 .modal-overlay {
   position: fixed;
@@ -375,6 +389,8 @@ body {
   border-radius: 16px;
   width: 90%;
   max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
@@ -438,4 +454,49 @@ body {
   cursor: pointer;
   font-weight: bold;
   font-size: 13px;
+}
+
+/* Signature - Quantum Smile */
+.signature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.signature-text {
+  font-size: 11px;
+  color: #A0AEC0;
+  font-family: 'Cairo', sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.signature-name {
+  font-family: 'Great Vibes', cursive;
+  font-size: 26px;
+
+  background: linear-gradient(
+    135deg,
+    #0000cc 5%,
+    #0000ff 35%,
+    #6666ff 55%,
+    #ccccff 70%,
+    #6666ff 55%,
+    #0000ff 85%,
+    #0000cc 100%
+  );
+
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+
+  animation: blueShine 3s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(33,150,243,0.35));
+}
+
+@keyframes blueShine {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
