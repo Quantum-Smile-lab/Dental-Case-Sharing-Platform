@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dental Case Sharing Platform</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="logo-area">
+        <span class="logo-icon">🦷</span>
+        <div>
+          <h1>Dental Case Sharing Platform</h1>
+          <p>منصة مشاركة وحجز الحالات الطبية لحظياً</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="userBadge" class="user-badge" onclick="openProfileModal()">👤 تسجيل الدخول</button>
+        <button class="btn-primary" onclick="handleNewCaseClick()">➕ إضافة حالة جديدة</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-container">
+    
+    <!-- Realtime Stats Bar -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">🟢 الحالات المتاحة</span>
+        <span class="stat-value" id="statAvailableCases">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">📌 حالاتي المحجوزة</span>
+        <span class="stat-value" id="statMyBookedCases">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">📍 المدن المسجلة</span>
+        <span class="stat-value" id="statCities">0</span>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-bar">
+      <button id="tabAvailable" class="tab-btn active" onclick="switchTab('available')">الحالات المتاحة</button>
+      <button id="tabMyBooked" class="tab-btn" onclick="switchTab('my_booked')">
+        حالاتي المحجوزة (<span id="myBookedBadge">0</span>)
+      </button>
+    </div>
+
+    <!-- Filters & Search Section -->
+    <section class="filter-section">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="ابحث باسم المريض، رقم الهاتف، أو التخصص..." oninput="applyFilters()">
+      </div>
+
+      <div class="filters-row">
+        <select id="filterGender" onchange="applyFilters()">
+          <option value="">جميع الأجناس</option>
+          <option value="Male">ذكر</option>
+          <option value="Female">أنثى</option>
+        </select>
+
+        <select id="filterLocation" onchange="applyFilters()">
+          <option value="">كل الأماكن</option>
+        </select>
+
+        <select id="filterTreatment" onchange="applyFilters()">
+          <option value="">كل العلاجات</option>
+        </select>
+
+        <button class="btn-reset" onclick="resetFilters()">إعادة ضبط</button>
+      </div>
+    </section>
+
+    <!-- Cases List Container -->
+    <section id="casesContainer" class="cases-grid">
+      <!-- Cases load here dynamically from Firebase -->
+    </section>
+
+  </main>
+
+  <!-- Doctor Profile Modal -->
+  <div id="profileModal" class="modal-overlay">
+    <div class="modal-card">
+      <h2>بيانات الطبيب</h2>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">ادخل بياناتك للتأكيد عند حجز أو إضافة أي حالة.</p>
+      
+      <div class="form-group">
+        <label>اسم الطبيب الكامل *</label>
+        <input type="text" id="doctorNameInput" placeholder="د. أحمد محمود">
+      </div>
+
+      <div class="form-group">
+        <label>رقم التواصل *</label>
+        <input type="tel" id="doctorPhoneInput" placeholder="01012345678">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeProfileModal()">إلغاء</button>
+        <button class="btn-primary" onclick="saveDoctorProfile()">حفظ البيانات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Case Modal -->
+  <div id="addCaseModal" class="modal-overlay">
+    <div class="modal-card">
+      <h2>إضافة حالة جديدة</h2>
+      
+      <div class="form-group">
+        <label>اسم المريض *</label>
+        <input type="text" id="casePatientName" placeholder="الاسم ثلاثي">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>رقم الهاتف *</label>
+          <input type="tel" id="casePatientPhone" placeholder="010XXXXXXXX">
+        </div>
+        <div class="form-group">
+          <label>العمر *</label>
+          <input type="number" id="casePatientAge" placeholder="25">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>الجنس *</label>
+          <select id="caseGender">
+            <option value="Male">ذكر</option>
+            <option value="Female">أنثى</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>المدينة / المنطقة *</label>
+          <input type="text" id="caseLocationInput" placeholder="القاهرة - Nasr City">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>نوع العلاج / التخصص *</label>
+        <input type="text" id="caseTreatmentInput" placeholder="Orthodontics, Endodontics...">
+      </div>
+
+      <div class="form-group">
+        <label>ملاحظات إضافية</label>
+        <textarea id="caseNotes" rows="3" placeholder="أضف تفاصيل الحالة الطبية..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeAddCaseModal()">إلغاء</button>
+        <button class="btn-primary" onclick="submitNewCase()">نشر الحالة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase CDN Integration -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBagwTL5204KXAtmXZwRvbFFa2unYOc6OE",
+      authDomain: "dental-case-sharing-platform.firebaseapp.com",
+      databaseURL: "https://dental-case-sharing-platform-default-rtdb.firebaseio.com",
+      projectId: "dental-case-sharing-platform",
+      storageBucket: "dental-case-sharing-platform.firebasestorage.app",
+      messagingSenderId: "143854112277",
+      appId: "1:143854112277:web:add7b2b03abc98fdf3081c",
+      measurementId: "G-Z68WW2022N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.db = db;
+    window.dbRef = ref;
+    window.dbPush = push;
+    window.dbSet = set;
+    window.dbOnValue = onValue;
+    window.dbUpdate = update;
+    window.dbRemove = remove;
+  </script>
+
+  <script src="app.js"></script>
+</body>
+</html>
