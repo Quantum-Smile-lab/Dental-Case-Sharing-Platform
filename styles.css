@@ -500,3 +500,41 @@ body {
   0%   { background-position: 0% center; }
   100% { background-position: 200% center; }
 }
+/* تنسيق قائمة الاقتراحات المخصصة للهواتف واللابتوب */
+.autocomplete-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.custom-suggestions-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 9999;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  margin-top: 4px;
+}
+
+.suggestion-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  text-align: right;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover, .suggestion-item:active {
+  background-color: #f1f5f9;
+  color: var(--accent-blue, #2563eb);
+}
