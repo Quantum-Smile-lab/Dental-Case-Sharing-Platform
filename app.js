@@ -1,14 +1,11 @@
 /* =========================================================
-   DENTAL CASE SHARING PLATFORM - APP LOGIC
+   DENTAL CASE SHARING PLATFORM - APP LOGIC (WITH MY PUBLISHED TAB)
    ========================================================= */
 
 let cases = [];
 let currentTab = 'available';
 let displayLimit = 15;
 let doctorProfile = JSON.parse(localStorage.getItem('qs_doctor')) || { name: '', phone: '' };
-
-let savedLocations = [];
-let savedTreatments = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
@@ -32,7 +29,7 @@ function initApp() {
     }
   }
 
-  // 2. المزامنة مع Firebase Realtime Database
+  // 2. المزامنة مع Firebase
   const checkDb = setInterval(() => {
     if (window.db) {
       clearInterval(checkDb);
@@ -118,90 +115,40 @@ function getCaseTreatments(c) {
   return c.treatment.split(',').map(t => t.trim()).filter(Boolean);
 }
 
-/* =========================================================
-   نظام الاقتراحات المخصص والبحث الذكي (حل مشكلة الهواتف)
-   ========================================================= */
-
 function updateDatalists() {
-  savedLocations = [...new Set(cases.map(c => c.location))].filter(Boolean);
-  
-  const treatmentsSet = new Set();
+  const locDatalist = document.getElementById('locationsDatalist');
+  const treatDatalist = document.getElementById('treatmentsDatalist');
+  if (!locDatalist || !treatDatalist) return;
+
+  const locations = [...new Set(cases.map(c => c.location))].filter(Boolean);
+  const allTreatments = [];
   cases.forEach(c => {
-    getCaseTreatments(c).forEach(t => treatmentsSet.add(t));
-  });
-  savedTreatments = [...treatmentsSet];
-
-  const locInput = document.getElementById('caseLocationInput');
-  if (locInput) setupAutocomplete(locInput, () => savedLocations);
-
-  const firstTreatment = document.querySelector('.case-treatment-field');
-  if (firstTreatment) setupAutocomplete(firstTreatment, () => savedTreatments);
-}
-
-function setupAutocomplete(inputEl, dataArrayGetter) {
-  if (!inputEl) return;
-
-  inputEl.setAttribute('autocomplete', 'off');
-
-  if (!inputEl.parentElement.classList.contains('autocomplete-wrapper')) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'autocomplete-wrapper';
-    inputEl.parentNode.insertBefore(wrapper, inputEl);
-    wrapper.appendChild(inputEl);
-  }
-
-  inputEl.oninput = function () {
-    const val = this.value.trim().toLowerCase();
-    closeAllSuggestionLists();
-
-    if (!val) return;
-
-    const dataList = typeof dataArrayGetter === 'function' ? dataArrayGetter() : dataArrayGetter;
-    
-    // بحث عن الكلمة في أي موضع (Substring Matching)
-    const matches = dataList.filter(item => item.toLowerCase().includes(val));
-
-    if (matches.length === 0) return;
-
-    const listDiv = document.createElement('div');
-    listDiv.className = 'custom-suggestions-list';
-
-    matches.forEach(matchText => {
-      const itemDiv = document.createElement('div');
-      itemDiv.className = 'suggestion-item';
-      itemDiv.textContent = matchText;
-
-      itemDiv.onmousedown = function (e) {
-        e.preventDefault();
-        inputEl.value = matchText;
-        closeAllSuggestionLists();
-      };
-
-      listDiv.appendChild(itemDiv);
+    getCaseTreatments(c).forEach(t => {
+      if (!allTreatments.includes(t)) allTreatments.push(t);
     });
+  });
 
-    inputEl.parentElement.appendChild(listDiv);
-  };
-
-  inputEl.onblur = function () {
-    setTimeout(closeAllSuggestionLists, 200);
-  };
-}
-
-function closeAllSuggestionLists() {
-  const lists = document.querySelectorAll('.custom-suggestions-list');
-  lists.forEach(el => el.remove());
+  locDatalist.innerHTML = locations.map(l => `<option value="${l}">`).join('');
+  treatDatalist.innerHTML = allTreatments.map(t => `<option value="${t}">`).join('');
 }
 
 function populateFilterOptions() {
+  const locations = [...new Set(cases.map(c => c.location))].filter(Boolean);
+  const allTreatments = [];
+  cases.forEach(c => {
+    getCaseTreatments(c).forEach(t => {
+      if (!allTreatments.includes(t)) allTreatments.push(t);
+    });
+  });
+
   const locSelect = document.getElementById('filterLocation');
   const treatSelect = document.getElementById('filterTreatment');
 
   const currentLoc = locSelect.value;
   const currentTreat = treatSelect.value;
 
-  locSelect.innerHTML = '<option value="">كل الأماكن</option>' + savedLocations.map(l => `<option value="${l}">${l}</option>`).join('');
-  treatSelect.innerHTML = '<option value="">كل العلاجات</option>' + savedTreatments.map(t => `<option value="${t}">${t}</option>`).join('');
+  locSelect.innerHTML = '<option value="">كل الأماكن</option>' + locations.map(l => `<option value="${l}">${l}</option>`).join('');
+  treatSelect.innerHTML = '<option value="">كل العلاجات</option>' + allTreatments.map(t => `<option value="${t}">${t}</option>`).join('');
 
   locSelect.value = currentLoc;
   treatSelect.value = currentTreat;
@@ -273,6 +220,7 @@ function renderCases(items) {
       minute: '2-digit'
     }) : 'غير محدد';
 
+    // توزيع أزرار التحكم بناءً على التبويب والحالة
     let actionButtonsHtml = '';
     if (c.status === 'available') {
       if (isMyCreated || currentTab === 'my_published') {
@@ -287,6 +235,7 @@ function renderCases(items) {
           <button class="btn-cancel" onclick="cancelBooking('${c.id}')">إلغاء الحجز</button>
         `;
       } else if (currentTab === 'my_published') {
+        // في تبويب حالاتي المنشورة وهي محجوزة: يظهر فقط اسم الطبيب وهاتفه بدون أزرار إكمال أو إلغاء حجز
         actionButtonsHtml = ''; 
       }
     }
@@ -335,24 +284,11 @@ function addTreatmentField(value = '') {
   const container = document.getElementById('treatmentsContainer');
   const row = document.createElement('div');
   row.className = 'treatment-input-row';
-  
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'case-treatment-field';
-  input.placeholder = 'اختر أو اكتب علاج إضافي...';
-  input.value = value;
-
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'btn-remove-treatment';
-  removeBtn.textContent = '✕';
-  removeBtn.onclick = function() { row.remove(); };
-
-  row.appendChild(input);
-  row.appendChild(removeBtn);
+  row.innerHTML = `
+    <input type="text" class="case-treatment-field" list="treatmentsDatalist" placeholder="اختر أو اكتب علاج إضافي..." value="${value}">
+    <button type="button" class="btn-remove-treatment" onclick="this.parentElement.remove()">✕</button>
+  `;
   container.appendChild(row);
-
-  setupAutocomplete(input, () => savedTreatments);
 }
 
 function resetAddCaseForm() {
@@ -363,10 +299,11 @@ function resetAddCaseForm() {
   document.getElementById('caseNotes').value = '';
 
   const container = document.getElementById('treatmentsContainer');
-  container.innerHTML = '';
-  
-  addTreatmentField();
-  updateDatalists();
+  container.innerHTML = `
+    <div class="treatment-input-row">
+      <input type="text" class="case-treatment-field" list="treatmentsDatalist" placeholder="اختر أو اكتب العلاج الأول *">
+    </div>
+  `;
 }
 
 function claimCase(id) {
