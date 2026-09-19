@@ -1,5 +1,5 @@
 /* =========================================================
-   DENTAL CASE SHARING PLATFORM - APP LOGIC WITH AUTO-SUGGEST
+   DENTAL CASE SHARING PLATFORM - APP LOGIC (WITH MY PUBLISHED TAB)
    ========================================================= */
 
 let cases = [];
@@ -100,6 +100,7 @@ function switchTab(tab) {
   displayLimit = 15;
   document.getElementById('tabAvailable').classList.toggle('active', tab === 'available');
   document.getElementById('tabMyBooked').classList.toggle('active', tab === 'my_booked');
+  document.getElementById('tabMyPublished').classList.toggle('active', tab === 'my_published');
   applyFilters();
 }
 
@@ -114,7 +115,6 @@ function getCaseTreatments(c) {
   return c.treatment.split(',').map(t => t.trim()).filter(Boolean);
 }
 
-// تحديث قوائم المقترحات (Datalists) لخانات الإضافة
 function updateDatalists() {
   const locDatalist = document.getElementById('locationsDatalist');
   const treatDatalist = document.getElementById('treatmentsDatalist');
@@ -163,6 +163,7 @@ function applyFilters() {
   const filtered = cases.filter(item => {
     if (currentTab === 'available' && item.status !== 'available') return false;
     if (currentTab === 'my_booked' && (item.status !== 'booked' || item.bookedBy !== doctorProfile.name)) return false;
+    if (currentTab === 'my_published' && item.createdBy !== doctorProfile.name) return false;
 
     if (gender && item.gender !== gender) return false;
     if (location && item.location !== location) return false;
@@ -219,6 +220,26 @@ function renderCases(items) {
       minute: '2-digit'
     }) : 'غير محدد';
 
+    // توزيع أزرار التحكم بناءً على التبويب والحالة
+    let actionButtonsHtml = '';
+    if (c.status === 'available') {
+      if (isMyCreated || currentTab === 'my_published') {
+        actionButtonsHtml = `<button class="btn-cancel" style="width:100%;" onclick="deleteMyCreatedCase('${c.id}')">🗑️ حذف حالتي</button>`;
+      } else {
+        actionButtonsHtml = `<button class="btn-claim" onclick="claimCase('${c.id}')">➕ حجز الحالة</button>`;
+      }
+    } else if (c.status === 'booked') {
+      if (currentTab === 'my_booked' || isMyBooked) {
+        actionButtonsHtml = `
+          <button class="btn-complete" onclick="completeCase('${c.id}')">✓ إكمال العلاج</button>
+          <button class="btn-cancel" onclick="cancelBooking('${c.id}')">إلغاء الحجز</button>
+        `;
+      } else if (currentTab === 'my_published') {
+        // في تبويب حالاتي المنشورة وهي محجوزة: يظهر فقط اسم الطبيب وهاتفه بدون أزرار إكمال أو إلغاء حجز
+        actionButtonsHtml = ''; 
+      }
+    }
+
     const card = document.createElement('div');
     card.className = 'case-card';
     card.innerHTML = `
@@ -242,14 +263,7 @@ function renderCases(items) {
       ${c.notes ? `<div class="case-notes-box">${c.notes}</div>` : ''}
       <div class="case-card-footer">
         <div class="action-buttons">
-          ${c.status === 'available' ? `<button class="btn-claim" onclick="claimCase('${c.id}')">➕ حجز الحالة</button>` : ''}
-          ${isMyBooked ? `
-            <button class="btn-complete" onclick="completeCase('${c.id}')">✓ إكمال العلاج</button>
-            <button class="btn-cancel" onclick="cancelBooking('${c.id}')">إلغاء الحجز</button>
-          ` : ''}
-          ${isMyCreated && c.status === 'available' ? `
-            <button class="btn-cancel" style="width:100%;" onclick="deleteMyCreatedCase('${c.id}')">🗑️ حذف حالتي</button>
-          ` : ''}
+          ${actionButtonsHtml}
         </div>
       </div>
     `;
@@ -380,10 +394,13 @@ function submitNewCase() {
 function updateBadges() {
   const availableCount = cases.filter(c => c.status === 'available').length;
   const bookedCount = cases.filter(c => c.status === 'booked' && c.bookedBy === doctorProfile.name).length;
+  const publishedCount = cases.filter(c => c.createdBy === doctorProfile.name).length;
 
   const availBadge = document.getElementById('availableBadge');
   const myBookedBadge = document.getElementById('myBookedBadge');
+  const myPublishedBadge = document.getElementById('myPublishedBadge');
 
   if (availBadge) availBadge.textContent = availableCount;
   if (myBookedBadge) myBookedBadge.textContent = bookedCount;
+  if (myPublishedBadge) myPublishedBadge.textContent = publishedCount;
 }
