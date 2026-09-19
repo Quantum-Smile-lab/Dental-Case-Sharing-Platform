@@ -1,11 +1,16 @@
 /* =========================================================
    DENTAL CASE SHARING PLATFORM - APP LOGIC (WITH MY PUBLISHED TAB)
+   + SMART AUTOCOMPLETE SYSTEM
    ========================================================= */
 
 let cases = [];
 let currentTab = 'available';
 let displayLimit = 15;
 let doctorProfile = JSON.parse(localStorage.getItem('qs_doctor')) || { name: '', phone: '' };
+
+// متغيرات عامة لتخزين البيانات المسجلة سابقاً (للاقتراحات الذكية)
+window.savedLocations = [];
+window.savedTreatments = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
@@ -34,7 +39,7 @@ function initApp() {
     if (window.db) {
       clearInterval(checkDb);
       const casesRef = window.dbRef(window.db, 'cases');
-      
+
       window.dbOnValue(casesRef, (snapshot) => {
         const data = snapshot.val();
         cases = [];
@@ -115,21 +120,31 @@ function getCaseTreatments(c) {
   return c.treatment.split(',').map(t => t.trim()).filter(Boolean);
 }
 
+/* ============ تحديث دالة updateDatalists (مع نظام الاقتراحات الذكية) ============ */
 function updateDatalists() {
-  const locDatalist = document.getElementById('locationsDatalist');
-  const treatDatalist = document.getElementById('treatmentsDatalist');
-  if (!locDatalist || !treatDatalist) return;
-
   const locations = [...new Set(cases.map(c => c.location))].filter(Boolean);
-  const allTreatments = [];
-  cases.forEach(c => {
-    getCaseTreatments(c).forEach(t => {
-      if (!allTreatments.includes(t)) allTreatments.push(t);
-    });
-  });
 
-  locDatalist.innerHTML = locations.map(l => `<option value="${l}">`).join('');
-  treatDatalist.innerHTML = allTreatments.map(t => `<option value="${t}">`).join('');
+  const treatmentsSet = new Set();
+  cases.forEach(c => {
+    getCaseTreatments(c).forEach(t => treatmentsSet.add(t));
+  });
+  const allTreatments = [...treatmentsSet];
+
+  // تحديث القوائم العالمية المستخدمة في الاقتراحات الذكية
+  window.savedLocations = locations;
+  window.savedTreatments = allTreatments;
+
+  // ربط البحث الذكي بحقل المكان في نموذج الإضافة (إن وُجد)
+  const locInput = document.getElementById('caseLocationInput');
+  if (locInput) setupAutocomplete(locInput, () => window.savedLocations);
+
+  // ربط البحث الذكي بكل حقول العلاجات الموجودة حالياً
+  document.querySelectorAll('.case-treatment-field').forEach(field => {
+    if (!field.dataset.acBound) {
+      setupAutocomplete(field, () => window.savedTreatments);
+      field.dataset.acBound = 'true';
+    }
+  });
 }
 
 function populateFilterOptions() {
@@ -236,7 +251,7 @@ function renderCases(items) {
         `;
       } else if (currentTab === 'my_published') {
         // في تبويب حالاتي المنشورة وهي محجوزة: يظهر فقط اسم الطبيب وهاتفه بدون أزرار إكمال أو إلغاء حجز
-        actionButtonsHtml = ''; 
+        actionButtonsHtml = '';
       }
     }
 
@@ -280,17 +295,34 @@ function loadMoreCases() {
   applyFilters();
 }
 
+/* ============ تحديث دالة addTreatmentField (مع ربط الاقتراحات تلقائياً) ============ */
 function addTreatmentField(value = '') {
   const container = document.getElementById('treatmentsContainer');
   const row = document.createElement('div');
   row.className = 'treatment-input-row';
-  row.innerHTML = `
-    <input type="text" class="case-treatment-field" list="treatmentsDatalist" placeholder="اختر أو اكتب علاج إضافي..." value="${value}">
-    <button type="button" class="btn-remove-treatment" onclick="this.parentElement.remove()">✕</button>
-  `;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'case-treatment-field';
+  input.placeholder = 'اختر أو اكتب علاج إضافي...';
+  input.value = value;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn-remove-treatment';
+  removeBtn.textContent = '✕';
+  removeBtn.onclick = function () { row.remove(); };
+
+  row.appendChild(input);
+  row.appendChild(removeBtn);
   container.appendChild(row);
+
+  // تفعيل البحث الذكي للحقل الجديد مباشرة
+  setupAutocomplete(input, () => window.savedTreatments || []);
+  input.dataset.acBound = 'true';
 }
 
+/* ============ تحديث دالة resetAddCaseForm (مع ربط الاقتراحات) ============ */
 function resetAddCaseForm() {
   document.getElementById('casePatientName').value = '';
   document.getElementById('casePatientPhone').value = '';
@@ -299,11 +331,27 @@ function resetAddCaseForm() {
   document.getElementById('caseNotes').value = '';
 
   const container = document.getElementById('treatmentsContainer');
-  container.innerHTML = `
-    <div class="treatment-input-row">
-      <input type="text" class="case-treatment-field" list="treatmentsDatalist" placeholder="اختر أو اكتب العلاج الأول *">
-    </div>
-  `;
+  container.innerHTML = '';
+
+  // إعادة إنشاء حقل العلاج الأول مع ربط الاقتراحات الذكية
+  const row = document.createElement('div');
+  row.className = 'treatment-input-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'case-treatment-field';
+  input.placeholder = 'اختر أو اكتب العلاج الأول *';
+
+  row.appendChild(input);
+  container.appendChild(row);
+
+  // ربط نظام الاقتراحات بعد إدراج العنصر في DOM
+  setupAutocomplete(input, () => window.savedTreatments || []);
+  input.dataset.acBound = 'true';
+
+  // ربط البحث الذكي بحقل المكان (تم إنشاؤه من HTML الأصلي، لكن نتحقق)
+  const locInput = document.getElementById('caseLocationInput');
+  if (locInput) setupAutocomplete(locInput, () => window.savedLocations || []);
 }
 
 function claimCase(id) {
@@ -312,8 +360,8 @@ function claimCase(id) {
     return openProfileModal();
   }
   const caseRef = window.dbRef(window.db, `cases/${id}`);
-  window.dbUpdate(caseRef, { 
-    status: 'booked', 
+  window.dbUpdate(caseRef, {
+    status: 'booked',
     bookedBy: doctorProfile.name,
     bookedByPhone: doctorProfile.phone
   });
@@ -403,4 +451,113 @@ function updateBadges() {
   if (availBadge) availBadge.textContent = availableCount;
   if (myBookedBadge) myBookedBadge.textContent = bookedCount;
   if (myPublishedBadge) myPublishedBadge.textContent = publishedCount;
+}
+
+/* =========================================================
+   نظام البحث الذكي (Autocomplete) - إضافات جديدة
+   ========================================================= */
+
+function setupAutocomplete(inputEl, dataArrayGetter) {
+  if (!inputEl) return;
+
+  inputEl.setAttribute('autocomplete', 'off');
+  inputEl.setAttribute('autocorrect', 'off');
+  inputEl.setAttribute('autocapitalize', 'off');
+  inputEl.setAttribute('spellcheck', 'false');
+
+  // تغليف الحقل
+  if (!inputEl.parentElement.classList.contains('autocomplete-wrapper')) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'autocomplete-wrapper';
+    inputEl.parentNode.insertBefore(wrapper, inputEl);
+    wrapper.appendChild(inputEl);
+  }
+
+  const wrapper = inputEl.parentElement;
+
+  // ✨ كل حقل له قائمة خاصة به (متغير محلي وليس عام)
+  let myList = null;
+
+  function closeMyList() {
+    if (myList) {
+      myList.remove();
+      myList = null;
+    }
+  }
+
+  function showSuggestions(filterText) {
+    closeMyList(); // نغلق قائلي فقط، لا نلمس باقي الحقول
+
+    const dataList = typeof dataArrayGetter === 'function' ? dataArrayGetter() : dataArrayGetter;
+    if (!dataList || dataList.length === 0) return;
+
+    const val = (filterText || '').trim().toLowerCase();
+    const matches = val
+      ? dataList.filter(item => item.toLowerCase().includes(val))
+      : [...dataList];
+
+    if (matches.length === 0) return;
+
+    myList = document.createElement('div');
+    myList.className = 'custom-suggestions-list';
+
+    matches.forEach(matchText => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'suggestion-item';
+
+      if (val) {
+        const idx = matchText.toLowerCase().indexOf(val);
+        if (idx >= 0) {
+          const before = matchText.substring(0, idx);
+          const match = matchText.substring(idx, idx + val.length);
+          const after = matchText.substring(idx + val.length);
+          itemDiv.innerHTML = `${before}<strong style="color:#1d4ed8;">${match}</strong>${after}`;
+        } else {
+          itemDiv.textContent = matchText;
+        }
+      } else {
+        itemDiv.textContent = matchText;
+      }
+
+      // ✅ استخدام pointerdown يعمل على الماوس + اللمس ويفوز على blur
+      const pick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        inputEl.value = matchText;
+        closeMyList();
+        // إغلاق لوحة المفاتيح على الموبايل بعد الاختيار
+        inputEl.blur();
+      };
+
+      itemDiv.addEventListener('pointerdown', pick);
+      itemDiv.addEventListener('touchstart', pick, { passive: false });
+
+      myList.appendChild(itemDiv);
+    });
+
+    wrapper.appendChild(myList);
+  }
+
+  // 1️⃣ عند الضغط/التركيز → اعرض القائمة كاملة
+  inputEl.addEventListener('focus', () => showSuggestions(inputEl.value));
+
+  // 2️⃣ عند الضغط مرة أخرى والحقل مفعّل → أعد عرض القائمة
+  inputEl.addEventListener('click', () => {
+    if (!myList) showSuggestions(inputEl.value);
+  });
+
+  // 3️⃣ عند الكتابة → فلترة
+  inputEl.addEventListener('input', () => showSuggestions(inputEl.value));
+
+  // 4️⃣ عند الخروج → أغلق قائمتي فقط (بعد مهلة قصيرة)
+  inputEl.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (document.activeElement !== inputEl) closeMyList();
+    }, 150);
+  });
+
+  // 5️⃣ Escape يغلق القائمة
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMyList();
+  });
 }
